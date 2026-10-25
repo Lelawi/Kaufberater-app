@@ -1,6 +1,6 @@
 // Kaufberater – App (läuft komplett im Browser, Daten liegen in Supabase)
-import { sb, html, raw, esc, safeUrl, fmtEur, fmtEur0, priceTag, fmtDate, ago, daysUntil, levelOf, LEVEL_TEXT, toast, md, nextShoppingEvent, hotWindow, packText, cheapestBasket, basketText } from './lib.js?v=202610251518';
-import { ladder, priceChart } from './chart.js?v=202610251518';
+import { sb, html, raw, esc, safeUrl, fmtEur, fmtEur0, priceTag, fmtDate, ago, daysUntil, levelOf, LEVEL_TEXT, toast, md, nextShoppingEvent, hotWindow, packText, cheapestBasket, basketText } from './lib.js?v=202610251525';
+import { ladder, priceChart } from './chart.js?v=202610251525';
 
 /** Läuft die Oberfläche in der iPhone-App (statt im Browser)? */
 const NATIVE = window.kbNative?.platform === 'ios' ? window.kbNative : null;
