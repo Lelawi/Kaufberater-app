@@ -1,5 +1,5 @@
 // Service Worker: Push-Nachrichten empfangen und die App-Hülle für schnellen Start zwischenspeichern
-const CACHE = 'kb-202610251515';
+const CACHE = 'kb-202610251518';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'lib.js', 'chart.js', 'manifest.webmanifest', 'icons/icon-192.png', 'vendor/supabase.js',
   'fonts/barlow-400.woff2', 'fonts/barlow-500.woff2', 'fonts/barlow-600.woff2', 'fonts/barlow-sc-500.woff2', 'fonts/barlow-sc-600.woff2', 'fonts/barlow-sc-700.woff2'];
 
@@ -15,7 +15,7 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
   e.respondWith(fetch(e.request).then((r) => {
     const copy = r.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); return r;
-  }).catch(() => caches.match(e.request).then((r) => r || caches.match('index.html'))));
+  }).catch(() => caches.match(e.request, { ignoreSearch: true }).then((r) => r || caches.match('index.html'))));
 });
 
 self.addEventListener('push', (e) => {

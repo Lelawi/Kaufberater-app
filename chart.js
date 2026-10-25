@@ -1,5 +1,5 @@
 // Preisleiter und Preisverlauf als SVG (ohne externe Bibliothek)
-import { esc, fmtEur0, fmtEur, fmtDate } from './lib.js';
+import { esc, fmtEur0, fmtEur, fmtDate } from './lib.js?v=202610251518';
 
 /**
  * Preisleiter: horizontaler Strich von "teuer" (rechts) bis "billig" (links) mit den drei Schwellen
