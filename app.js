@@ -1,6 +1,6 @@
 // Kaufberater – App (läuft komplett im Browser, Daten liegen in Supabase)
-import { sb, html, raw, esc, safeUrl, fmtEur, fmtEur0, priceTag, fmtDate, ago, daysUntil, levelOf, LEVEL_TEXT, toast, md, nextShoppingEvent, hotWindow, packText, cheapestBasket, basketText } from './lib.js?v=202611172044';
-import { ladder, priceChart } from './chart.js?v=202611172044';
+import { sb, html, raw, esc, safeUrl, fmtEur, fmtEur0, priceTag, fmtDate, ago, daysUntil, levelOf, LEVEL_TEXT, toast, md, nextShoppingEvent, hotWindow, packText, cheapestBasket, basketText } from './lib.js?v=202611172125';
+import { ladder, priceChart } from './chart.js?v=202611172125';
 
 /** Läuft die Oberfläche in der iPhone-App (statt im Browser)? */
 const NATIVE = window.kbNative?.platform === 'ios' ? window.kbNative : null;
@@ -845,6 +845,9 @@ async function viewAlerts() {
     await sb.from('kb_alerts').update({ read_at: new Date().toISOString() }).is('read_at', null);
     route();
   };
+  // Gesehen = gelesen (17.11.): Punkte bleiben auf dieser Seite sichtbar, die Zahl am Menü verschwindet
+  const unseen = data.filter((a) => !a.read_at).map((a) => a.id);
+  if (unseen.length) sb.from('kb_alerts').update({ read_at: new Date().toISOString() }).in('id', unseen).is('read_at', null).then(refreshBadge);
   view.querySelectorAll('.alert-row').forEach((el) => el.addEventListener('click', () => {
     sb.from('kb_alerts').update({ read_at: new Date().toISOString() }).eq('id', el.dataset.id).is('read_at', null).then(refreshBadge);
   }));
