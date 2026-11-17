@@ -1,6 +1,6 @@
 // Kaufberater – App (läuft komplett im Browser, Daten liegen in Supabase)
-import { sb, html, raw, esc, safeUrl, fmtEur, fmtEur0, priceTag, fmtDate, ago, daysUntil, levelOf, LEVEL_TEXT, toast, md, nextShoppingEvent, hotWindow, packText, cheapestBasket, basketText } from './lib.js';
-import { ladder, priceChart } from './chart.js';
+import { sb, html, raw, esc, safeUrl, fmtEur, fmtEur0, priceTag, fmtDate, ago, daysUntil, levelOf, LEVEL_TEXT, toast, md, nextShoppingEvent, hotWindow, packText, cheapestBasket, basketText } from './lib.js?v=202611172039';
+import { ladder, priceChart } from './chart.js?v=202611172039';
 
 /** Läuft die Oberfläche in der iPhone-App (statt im Browser)? */
 const NATIVE = window.kbNative?.platform === 'ios' ? window.kbNative : null;
@@ -349,7 +349,13 @@ async function viewProduct(id) {
   if (alertsR.data?.length) sb.from('kb_alerts').update({ read_at: new Date().toISOString() }).in('id', alertsR.data.map((a) => a.id)).then(refreshBadge);
   // Als falsch gemeldete Preise (z. B. veralteter Marktplatz-Preis auf der Zwischenseite) ausblenden, bis sich der Preis ändert
   const allOffers = offersR.data ?? [];
-  const disputed = allOffers.filter((o) => o.disputed_total != null && Number(o.disputed_total) === Number(o.total));
+  // Grund: stock = 7 Tage, shipping/wrong = dauerhaft, price/leer = bis −10 % (wie worker evaluate.ts)
+  const disputed = allOffers.filter((o) => {
+    if (o.disputed_total == null) return false;
+    if (o.disputed_reason === 'stock') return Date.now() - new Date(o.disputed_at).getTime() < 7 * 86400e3;
+    if (o.disputed_reason === 'shipping' || o.disputed_reason === 'wrong') return true;
+    return Number(o.total) >= Number(o.disputed_total) * 0.9;
+  });
   const offers = allOffers.filter((o) => !disputed.includes(o));
   const a = analysisR.data?.[0];
   // Nicht online kaufbar (ausverkauft oder nur im Markt) ans Ende – sie zählen auch nicht für den Bestpreis
@@ -414,7 +420,7 @@ async function viewProduct(id) {
 
   <section class="panel"><h2>Angebote Neuware <span class="muted" style="font-weight:400">${newOffers.length}</span></h2>
     ${newOffers.length ? offerTable(newOffers, false, multi) : html`<p class="muted">Noch keine.</p>`}
-    ${disputed.length ? html`<p class="hint">${disputed.length} Angebot${disputed.length === 1 ? '' : 'e'} als falsch gemeldet (${disputed.map((o) => `${o.shop} ${fmtEur(o.total)}`).join(', ')}) – ${disputed.length === 1 ? 'zählt' : 'zählen'} nicht, bis sich der Preis ändert. <button class="linklike" id="undispute">Rückgängig</button></p>` : ''}</section>
+    ${disputed.length ? html`<p class="hint">${disputed.length} Angebot${disputed.length === 1 ? '' : 'e'} als falsch gemeldet (${disputed.map((o) => `${o.shop} ${fmtEur(o.total)}`).join(', ')}) – ${disputed.length === 1 ? 'zählt' : 'zählen'} vorerst nicht.<button class="linklike" id="undispute">Rückgängig</button></p>` : ''}</section>
   ${p.include_refurb ? html`<section class="panel"><h2>Refurbished, B-Ware, gebraucht <span class="muted" style="font-weight:400">${refurb.length}</span></h2>
     ${refurb.length ? offerTable(refurb, true, multi) : html`<p class="muted">Noch keine gefunden.</p>`}</section>` : ''}
 
@@ -465,13 +471,13 @@ async function viewProduct(id) {
   view.querySelectorAll('[data-dispute]').forEach((b) => b.addEventListener('click', async () => {
     const o = allOffers.find((x) => x.id === b.dataset.dispute);
     if (!o || !confirm(`${o.shop}: Stimmt der Preis ${fmtEur(o.total)} beim Händler nicht? Das Angebot zählt dann nicht mehr für Bestpreis und Meldungen – bis sich der Preis im Preisvergleich ändert.`)) return;
-    const { error } = await sb.from('kb_offers').update({ disputed_total: o.total, disputed_at: new Date().toISOString() }).eq('id', o.id);
+    const { error } = await sb.from('kb_offers').update({ disputed_total: o.total, disputed_at: new Date().toISOString(), disputed_reason: 'price' }).eq('id', o.id);
     if (error) return toast(error.message);
     await sb.rpc('kb_request_check', { p_product: id });
     toast('Danke – wird ignoriert, Bestpreis wird neu berechnet'); route();
   }));
   document.getElementById('undispute')?.addEventListener('click', async () => {
-    await sb.from('kb_offers').update({ disputed_total: null, disputed_at: null }).in('id', disputed.map((o) => o.id));
+    await sb.from('kb_offers').update({ disputed_total: null, disputed_at: null, disputed_reason: null }).in('id', disputed.map((o) => o.id));
     await sb.rpc('kb_request_check', { p_product: id }); route();
   });
   document.getElementById('identOk')?.addEventListener('click', async (e) => {
@@ -907,7 +913,7 @@ async function viewSettings() {
           <div class="field"><label for="vl">Bezeichnung</label><input id="vl" type="text" required placeholder="Amazon Prime"></div>
         </div>
         <div class="grid-2">
-          <div class="field"><label for="vs">Gilt für Shop <span class="muted">(leer = überall)</span></label><input id="vs" type="text" placeholder="mediamarkt"></div>
+          <div class="field"><label for="vs">Gilt für Shop <span class="muted">(bei Gutscheinen Pflicht – wird nur dort abgezogen)</span></label><input id="vs" type="text" placeholder="mediamarkt"></div>
           <div class="field"><label for="vc">Code <span class="muted">(optional)</span></label><input id="vc" type="text"></div>
         </div>
         <div class="grid-2" style="grid-template-columns:1fr 1fr 1fr">
@@ -968,6 +974,8 @@ async function viewSettings() {
   document.getElementById('vf').addEventListener('submit', async (e) => {
     e.preventDefault();
     const g = (x) => document.getElementById(x).value;
+    // Gutscheine gelten nie überall – ohne Shop rechnet der Preisvergleich sie nicht ein
+    if (g('vk') === 'voucher' && !g('vs').trim()) { toast('Bitte den Shop angeben, für den der Gutschein gilt'); document.getElementById('vs').focus(); return; }
     const { error } = await sb.from('kb_vouchers').insert({ kind: g('vk'), label: g('vl').trim(), shop: g('vs').trim() || null, code: g('vc').trim() || null,
       value: g('vv') ? Number(g('vv')) : null, value_type: g('vv') ? g('vt') : null, min_order: g('vm') ? Number(g('vm')) : null, valid_until: g('vu') || null });
     toast(error ? error.message : 'Hinzugefügt'); if (!error) route();
