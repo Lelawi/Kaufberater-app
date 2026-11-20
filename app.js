@@ -1,6 +1,6 @@
 // Kaufberater – App (läuft komplett im Browser, Daten liegen in Supabase)
-import { sb, html, raw, esc, safeUrl, fmtEur, fmtEur0, priceTag, fmtDate, ago, daysUntil, levelOf, LEVEL_TEXT, toast, md, nextShoppingEvent, hotWindow, packText, cheapestBasket, basketText } from './lib.js?v=202611200909';
-import { ladder, priceChart } from './chart.js?v=202611200909';
+import { sb, html, raw, esc, safeUrl, fmtEur, fmtEur0, priceTag, fmtDate, ago, daysUntil, levelOf, LEVEL_TEXT, toast, md, nextShoppingEvent, hotWindow, packText, cheapestBasket, basketText } from './lib.js?v=202611200933';
+import { ladder, priceChart } from './chart.js?v=202611200933';
 
 /** Läuft die Oberfläche in der iPhone-App (statt im Browser)? */
 const NATIVE = window.kbNative?.platform === 'ios' ? window.kbNative : null;
@@ -1130,11 +1130,11 @@ function protectionPanel(p, best, basket) {
     <dl class="kv">
       <dt>Gekauft</dt><dd>${fmtEur(p.bought_price)}${p.bought_shop ? ` bei ${p.bought_shop}` : ''} · ${fmtDate(p.bought_at)}</dd>
       <dt>Rückgabe bis</dt><dd>${p.return_until ? html`${fmtDate(p.return_until)} ${active ? html`<span class="muted">(noch ${days} Tag${days === 1 ? '' : 'e'})</span>` : html`<span class="muted">(abgelaufen)</span>`}` : 'nicht angegeben – wird weiter beobachtet'}</dd>
-      ${cur != null ? html`<dt>Jetzt günstigster</dt><dd><span class="num">${fmtEur(cur)}</span>${best ? html` bei <a href="${safeUrl(best.url)}" target="_blank" rel="noopener">${best.shop}</a>` : ''}</dd>` : ''}
+      ${cur != null ? html`<dt>Bestpreis heute</dt><dd><span class="num">${fmtEur(cur)}</span>${best ? html` bei <a href="${safeUrl(best.url)}" target="_blank" rel="noopener">${best.shop}</a>` : ''}</dd>` : ''}
     </dl>
     ${diff != null ? diff >= 1
       ? html`<div class="verdict buy_now"><strong>${fmtEur(diff)} günstiger als bezahlt</strong>${active ? 'Preisanpassung beim Shop anfragen oder zurückgeben und neu kaufen.' : 'Rückgabefrist ist aber vorbei.'}</div>`
-      : html`<p class="hint">Kein günstigeres Angebot als dein Kaufpreis.${active ? ' Du bekommst eine Meldung, falls es deutlich günstiger wird.' : ''}</p>` : ''}
+      : html`<p class="hint">Nicht günstiger als dein Kaufpreis.${active ? ' Du bekommst eine Meldung, falls es deutlich günstiger wird.' : ''}</p>` : ''}
   </section>`;
 }
 
